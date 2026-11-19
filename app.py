@@ -46,6 +46,9 @@ if 'players_df' not in st.session_state:
 if 'events_df' not in st.session_state:
     st.session_state['events_df'] = pd.DataFrame()
 
+APP_VERSION = "1.3"
+PUBLICO = gestion.modo_publico()   # True = versión para jugadoras (sin carpeta local ni gestión)
+
 # Helper to load data
 def _acortar_equipos(matches, players, events):
     """Muestra nombres cortos de club (Ferro, Boca, River...) sin tocar la caché en disco."""
@@ -63,7 +66,8 @@ def load_data(folder_path):
     """Lee la carpeta de partidos + los subidos desde la app, y aplica los partidos ocultos."""
     gestion.ensure_dirs()
     gestion.migrate_old_uploads()
-    if not os.path.isdir(folder_path):
+    gestion.sync_legacy_positions()
+    if not os.path.isdir(folder_path) and not PUBLICO:
         st.info("No se encontró la carpeta indicada: se usan los partidos de esa carpeta guardados en la caché, "
                 "más los subidos desde la app.")
     cache_path = os.path.join(os.path.dirname(__file__), "dvw_cache.pkl")
@@ -91,30 +95,36 @@ with st.sidebar:
     torneo_slot = st.container()
     st.divider()
 
-    st.subheader("📂 Carpeta de partidos")
-    folder_input = st.text_input("Carpeta con archivos .dvw", value=st.session_state['data_folder'])
-    col_btn1, col_btn2 = st.columns(2)
-    with col_btn1:
-        if st.button("🔄 Cargar / Actualizar", use_container_width=True):
-            st.session_state['data_folder'] = folder_input
-            recargar()
-            st.success(f"¡{len(st.session_state['matches_df'])} partidos cargados!")
-    with col_btn2:
-        if st.button("🧹 Limpiar Caché", use_container_width=True,
-                     help="Borra la memoria de lectura. Si la carpeta no está disponible en esta PC, esos partidos se pierden."):
-            cache_file = os.path.join(os.path.dirname(__file__), "dvw_cache.pkl")
-            if os.path.exists(cache_file):
-                os.remove(cache_file)
-            st.info("Caché reiniciada.")
-    st.caption("Para **sumar o quitar partidos** y cargar el **Excel de puestos**, usá la pestaña 📁 Partidos y Archivos.")
+    if not PUBLICO:
+        st.subheader("📂 Carpeta de partidos")
+        folder_input = st.text_input("Carpeta con archivos .dvw", value=st.session_state['data_folder'])
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            if st.button("🔄 Cargar / Actualizar", use_container_width=True):
+                st.session_state['data_folder'] = folder_input
+                recargar()
+                st.success(f"¡{len(st.session_state['matches_df'])} partidos cargados!")
+        with col_btn2:
+            if st.button("🧹 Limpiar Caché", use_container_width=True,
+                         help="Borra la memoria de lectura. Si la carpeta no está disponible en esta PC, esos partidos se pierden."):
+                cache_file = os.path.join(os.path.dirname(__file__), "dvw_cache.pkl")
+                if os.path.exists(cache_file):
+                    os.remove(cache_file)
+                st.info("Caché reiniciada.")
+        st.caption("Para **sumar o quitar partidos** y cargar el **Excel de puestos**, usá la pestaña 📁 Partidos y Archivos.")
+
 
     st.divider()
     pos_file = gestion.positions_path()
-    if pos_file:
+    if PUBLICO:
+        if pos_file:
+            st.success("✅ Puestos de las jugadoras cargados")
+    elif pos_file:
         st.success("✅ Puestos vinculados desde Excel")
     else:
         st.caption("ℹ️ Sin Excel de puestos. La app muestra métricas directas sin asumir puestos.")
     st.caption("Desarrollado para cuerpo técnico y análisis estadístico avanzado de Voleibol.")
+    st.caption(f"Versión {APP_VERSION}" + (" · publicada" if PUBLICO else " · administración"))
 
 # Auto-load on first run
 if st.session_state['matches_df'].empty and not st.session_state.get('auto_cargado'):
@@ -138,13 +148,20 @@ if not raw_matches.empty:
         matches_df = raw_matches[raw_matches['tournament'] == torneo_sel].reset_index(drop=True)
         events_df = raw_events[raw_events['tournament'] == torneo_sel].reset_index(drop=True)
 
+if PUBLICO and not matches_df.empty:
+    with torneo_slot:
+        st.caption(f"📊 {len(matches_df)} partidos analizados")
+
 # Top Header
 render_header(matches_df)
 gestion.mostrar_flash()
 
 if matches_df.empty or events_df.empty:
-    st.warning("⚠️ No hay partidos cargados. Subí archivos .dvw acá abajo o indicá la carpeta en la barra lateral.")
-    gestion.render_partidos(raw_matches, recargar)
+    if PUBLICO:
+        st.warning("⚠️ Todavía no hay partidos para mostrar.")
+    else:
+        st.warning("⚠️ No hay partidos cargados. Subí archivos .dvw acá abajo o indicá la carpeta en la barra lateral.")
+        gestion.render_partidos(raw_matches, recargar)
     st.stop()
 
 # Compute core analytics
@@ -195,14 +212,18 @@ with st.expander("ℹ️ ¿Qué indica el Balance de Puntos? (Haz clic para ver 
     """)
 
 # Navigation Tabs
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+nombres_tabs = [
     "🏆 Rankings de Equipos",
     "📊 Eficiencia por Equipo & Plantel",
     "🎯 Mapa de Jugadoras (vs Promedio Liga)",
     "⚔️ Comparativa Cara a Cara",
     "🙋‍♀️ Ficha de Jugadora",
-    "📁 Partidos y Archivos"
-])
+]
+if not PUBLICO:
+    nombres_tabs.append("📁 Partidos y Archivos")
+_tabs = st.tabs(nombres_tabs)
+tab1, tab2, tab3, tab4, tab5 = _tabs[:5]
+tab6 = _tabs[5] if not PUBLICO else None
 
 # -------------------------------------------------------------
 # TAB 1: RANKINGS DE EQUIPOS
@@ -692,8 +713,9 @@ with tab5:
 # -------------------------------------------------------------
 # TAB 6: PARTIDOS Y ARCHIVOS (agregar / quitar partidos, Excel de puestos)
 # -------------------------------------------------------------
-with tab6:
-    gestion.render_partidos(raw_matches, recargar)
-    gestion.render_puestos(players_df, player_stats)
+if tab6 is not None:
+    with tab6:
+        gestion.render_partidos(raw_matches, recargar)
+        gestion.render_puestos(players_df, player_stats)
 
 footer()

@@ -23,9 +23,49 @@ OLD_UPLOAD_DIR = os.path.join(BASE, "uploaded_dvw")          # carpeta de la ver
 LEGACY_POS = r"c:\ALICIA\VOLEY\FERRO\Base de datos jugadoras - puestos.xlsx"
 
 
+# ------------------------------------------------------------------ modo publicado
+def modo_publico():
+    """
+    True en la versión publicada para las jugadoras (Streamlit Cloud): se oculta todo lo que
+    hace referencia a tu PC y la pestaña de gestión de archivos.
+    Se puede forzar con la variable de entorno VOLEY_MODO_PUBLICO=1/0 o con `modo_publico = true`
+    en los Secrets de Streamlit Cloud. Si no, se detecta solo (Streamlit Cloud corre en /mount/src).
+    """
+    v = os.environ.get("VOLEY_MODO_PUBLICO")
+    if v is not None:
+        return v.strip().lower() in ("1", "true", "si", "sí", "yes")
+    try:
+        if "modo_publico" in st.secrets:
+            return bool(st.secrets["modo_publico"])
+    except Exception:
+        pass
+    # 1) Desde dónde se abre la app: en tu PC es localhost; publicada es otra dirección (xxx.streamlit.app)
+    try:
+        host = (st.context.headers.get("host") or "").lower()
+        if host:
+            return not host.startswith(("localhost", "127.0.0.1", "[::1]"))
+    except Exception:
+        pass
+    # 2) Respaldo: la nube corre en Linux (/mount/src); tu PC es Windows
+    return os.path.isdir("/mount/src") or os.environ.get("HOME", "") == "/home/adminuser" or os.name != "nt"
+
+
 # ------------------------------------------------------------------ archivos
 def ensure_dirs():
     os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
+def sync_legacy_positions():
+    """
+    En tu PC: si el Excel de puestos está en la ruta de siempre y todavía no hay copia en datos/,
+    se copia a datos/puestos.xlsx. Así viaja con el proyecto a GitHub y la versión publicada tiene los puestos.
+    """
+    try:
+        if not os.path.exists(POS_FILE) and os.path.exists(LEGACY_POS):
+            ensure_dirs()
+            shutil.copy(LEGACY_POS, POS_FILE)
+    except Exception:
+        pass
 
 
 def migrate_old_uploads():
