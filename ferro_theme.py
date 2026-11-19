@@ -52,6 +52,13 @@ def short_team(name):
     return name
 
 
+def numerar(df):
+    """Numera las filas 1, 2, 3... según el orden en que se muestran (puesto en el ranking)."""
+    df = df.reset_index(drop=True)
+    df.index = df.index + 1
+    return df
+
+
 def es_ferro(name):
     return isinstance(name, str) and "ferro" in name.lower()
 

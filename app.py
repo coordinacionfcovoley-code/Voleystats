@@ -13,7 +13,7 @@ import plotly.graph_objects as go
 
 from dvw_parser import load_all_dvw_matches, parse_dvw_file
 from ferro_theme import (
-    inject_css, sidebar_brand, render_header, footer, short_team,
+    inject_css, numerar, sidebar_brand, render_header, footer, short_team,
     ranking_colors, team_colors, VERDE, VERDE_OSCURO, VERDE_MEDIO, ROJO, NARANJA
 )
 import gestion
@@ -240,7 +240,7 @@ with tab1:
 
     if fundamento == "Ataque (General & Fases)":
         cols_show = ['Equipo', 'Partidos', 'Sets', 'Atq_Tot', 'Atq_Pts', 'Atq_%Pts', 'Atq_%Err', 'Atq_%Bloq', 'Atq_Efic', 'K1_Efic', 'K2_Efic']
-        df_display = team_rankings[cols_show].sort_values(by='Atq_Efic', ascending=False)
+        df_display = numerar(team_rankings[cols_show].sort_values(by='Atq_Efic', ascending=False))
         st.dataframe(df_display.style.highlight_max(subset=['Atq_%Pts', 'Atq_Efic', 'K1_Efic', 'K2_Efic'], color='#d1fae5')
                                    .highlight_min(subset=['Atq_%Err', 'Atq_%Bloq'], color='#d1fae5'),
                      use_container_width=True)
@@ -260,7 +260,7 @@ with tab1:
 
     elif fundamento == "Recepción":
         cols_show = ['Equipo', 'Partidos', 'Sets', 'Rec_Tot', 'Rec_#', 'Rec_%#', 'Rec_%Pos', 'Rec_%Err', 'Rec_Efic']
-        df_display = team_rankings[cols_show].sort_values(by='Rec_%Pos', ascending=False)
+        df_display = numerar(team_rankings[cols_show].sort_values(by='Rec_%Pos', ascending=False))
         st.dataframe(df_display.style.highlight_max(subset=['Rec_%#', 'Rec_%Pos', 'Rec_Efic'], color='#d1fae5')
                                    .highlight_min(subset=['Rec_%Err'], color='#d1fae5'),
                      use_container_width=True)
@@ -280,7 +280,7 @@ with tab1:
 
     elif fundamento == "Saque":
         cols_show = ['Equipo', 'Partidos', 'Sets', 'Saq_Tot', 'Saq_Aces', 'Saq_Aces/Set', 'Saq_%Err', 'Saq_%Presion']
-        df_display = team_rankings[cols_show].sort_values(by='Saq_Aces/Set', ascending=False)
+        df_display = numerar(team_rankings[cols_show].sort_values(by='Saq_Aces/Set', ascending=False))
         st.dataframe(df_display.style.highlight_max(subset=['Saq_Aces', 'Saq_Aces/Set', 'Saq_%Presion'], color='#d1fae5')
                                    .highlight_min(subset=['Saq_%Err'], color='#d1fae5'),
                      use_container_width=True)
@@ -299,7 +299,7 @@ with tab1:
 
     elif fundamento == "Bloqueo":
         cols_show = ['Equipo', 'Partidos', 'Sets', 'Bloq_Pts', 'Bloq_Pts/Set', 'Bloq_Pos']
-        df_display = team_rankings[cols_show].sort_values(by='Bloq_Pts/Set', ascending=False)
+        df_display = numerar(team_rankings[cols_show].sort_values(by='Bloq_Pts/Set', ascending=False))
         st.dataframe(df_display.style.highlight_max(subset=['Bloq_Pts', 'Bloq_Pts/Set'], color='#d1fae5'),
                      use_container_width=True)
 
@@ -317,7 +317,7 @@ with tab1:
 
     elif fundamento == "Balance General":
         cols_show = ['Equipo', 'Partidos', 'Sets', 'Ptos_Tot', 'Ptos/Set', 'Err_Tot', 'Balance']
-        df_display = team_rankings[cols_show].sort_values(by='Balance', ascending=False)
+        df_display = numerar(team_rankings[cols_show].sort_values(by='Balance', ascending=False))
         st.dataframe(df_display.style.highlight_max(subset=['Ptos_Tot', 'Ptos/Set', 'Balance'], color='#d1fae5')
                                    .highlight_min(subset=['Err_Tot'], color='#d1fae5'),
                      use_container_width=True)
@@ -414,7 +414,7 @@ with tab2:
         p_cols += ['Partidos', 'Sets', 'Atq_Tot', 'Atq_Pts', 'Atq_Efic', 'Rec_Tot', 'Rec_%Pos', 'Rec_Efic', 'Saq_Aces', 'Bloq_Pts', 'Ptos_Tot', 'Balance']
 
         st.dataframe(
-            team_players[p_cols].sort_values(by='Ptos_Tot', ascending=False),
+            numerar(team_players[p_cols].sort_values(by='Ptos_Tot', ascending=False)),
             use_container_width=True
         )
     else:
@@ -538,7 +538,7 @@ with tab3:
 
         st.markdown(f"##### 🌟 Líderes en este Fundamento ({texto_equipos}):")
         top_destacadas = df_plot.sort_values(by=y_col, ascending=False).head(10)
-        st.dataframe(top_destacadas[['Jugadora', 'Equipo', x_col, y_col, 'Ptos_Tot', 'Balance', 'Sets']], use_container_width=True)
+        st.dataframe(numerar(top_destacadas[['Jugadora', 'Equipo', x_col, y_col, 'Ptos_Tot', 'Balance', 'Sets']]), use_container_width=True)
 
 # -------------------------------------------------------------
 # TAB 4: COMPARATIVA CARA A CARA (HEAD-TO-HEAD)
@@ -702,7 +702,7 @@ with tab4:
             'Ventaja Táctica': adv
         })
 
-    st.dataframe(pd.DataFrame(comp_rows).astype(str), use_container_width=True)
+    st.dataframe(pd.DataFrame(comp_rows).astype(str), use_container_width=True, hide_index=True)
 
 # -------------------------------------------------------------
 # TAB 5: FICHA DE JUGADORA
